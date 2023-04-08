@@ -20,8 +20,10 @@ class ReplayBuffer:
     def __len__(self):
         return self._len
 
-    def add(self, state, action, reward, next_state, done):
+    def size(self):
+        return self._maxsize
 
+    def add(self, state, action, reward, next_state, done):
         data = (state, action, reward, next_state, done)
 
         if self._cur == self._maxsize:
