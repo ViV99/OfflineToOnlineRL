@@ -1,7 +1,8 @@
 import random
+import numpy as np
 
 
-class ReplayBuffer(object):
+class ReplayBuffer:
     def __init__(self, size):
         """
         Create Replay buffer.
@@ -11,19 +12,18 @@ class ReplayBuffer(object):
             Max number of transitions to store in the buffer. When the buffer
             overflows the old memories are dropped.
         """
-        self._storage = np.empty((size, 5))
+        self._storage = [(0, 0, 0, 0, 0)] * size
         self._len = 0
         self._cur = 0
         self._maxsize = size
 
-
     def __len__(self):
         return self._len
 
-    def add(self, obs_t, action, reward, obs_tp1, done):
-        
-        data = np.array([obs_t, action, reward, obs_tp1, done])
-        
+    def add(self, state, action, reward, next_state, done):
+
+        data = (state, action, reward, next_state, done)
+
         if self._cur == self._maxsize:
             self._cur = 0
 
@@ -33,32 +33,20 @@ class ReplayBuffer(object):
         self._len = min(self._len + 1, self._maxsize)
 
     def sample(self, batch_size):
-        """Sample a batch of experiences.
-        Parameters
-        ----------
-        batch_size: int
-            How many transitions to sample.
-        Returns
-        -------
-        obs_batch: np.array
-            batch of observations
-        act_batch: np.array
-            batch of actions executed given obs_batch
-        rew_batch: np.array
-            rewards received as results of executing act_batch
-        next_obs_batch: np.array
-            next set of observations seen after executing act_batch
-        done_mask: np.array
-            done_mask[i] = 1 if executing act_batch[i] resulted in
-            the end of an episode and 0 otherwise.
-        """
         # collect <s,a,r,s',done> for each index
-        sample = random.choices(self._storage[:self._len], k=batch_size)
-
+        sz = min(batch_size, self._len)
+        sample = random.choices(self._storage[:self._len], k=sz)
+        obs, act, rew, obs1, done = [0] * sz, [0] * sz, [0] * sz, [0] * sz, [0] * sz
+        for i in range(len(sample)):
+            obs[i] = sample[i][0]
+            act[i] = sample[i][1]
+            rew[i] = sample[i][2]
+            obs1[i] = sample[i][3]
+            done[i] = sample[i][4]
         return (
-            sample[:, 0],
-            sample[:, 1],
-            sample[:, 2],
-            sample[:, 3],
-            sample[:, 4],
+            np.array(obs),
+            np.array(act),
+            np.array(rew),
+            np.array(obs1),
+            np.array(done),
         )
