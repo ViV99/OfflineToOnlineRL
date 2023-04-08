@@ -34,19 +34,19 @@ class ReplayBuffer:
 
     def sample(self, batch_size):
         # collect <s,a,r,s',done> for each index
-        sz = min(batch_size, self._len)
-        sample = random.choices(self._storage[:self._len], k=sz)
-        obs, act, rew, obs1, done = [0] * sz, [0] * sz, [0] * sz, [0] * sz, [0] * sz
+        sample = random.choices(self._storage[:self._len], k=batch_size)
+        state, act, rew, next_state, done = [0] * batch_size, [0] * batch_size, [0] * batch_size, \
+                                            [0] * batch_size, [0] * batch_size
         for i in range(len(sample)):
-            obs[i] = sample[i][0]
+            state[i] = sample[i][0]
             act[i] = sample[i][1]
             rew[i] = sample[i][2]
-            obs1[i] = sample[i][3]
+            next_state[i] = sample[i][3]
             done[i] = sample[i][4]
         return (
-            np.array(obs),
+            np.array(state),
             np.array(act),
             np.array(rew),
-            np.array(obs1),
+            np.array(next_state),
             np.array(done),
         )
