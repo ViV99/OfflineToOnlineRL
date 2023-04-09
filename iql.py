@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.distributions.multivariate_normal import MultivariateNormal
+from utils import soft_update
 
 
 class QNet(nn.Module):
@@ -131,6 +132,7 @@ class IQL:
                  beta: float = 3.0,
                  discount: float = 0.99,
                  target_refresh_freq: int = 5000,
+                 alpha: float = 0.005,
                  logg_freq: int = 50):
         self.max_action = max_action
         self.q_net = q_net  # Аппроксимация Q
@@ -142,9 +144,11 @@ class IQL:
         self.policy_opt = policy_opt  # Отпимайзер для политики
         self.tau = tau  # Коэффициент для экспектильной регрессии
         self.beta = beta  # Коэффициент для advantage-weighted регрессии
+
         self.discount = discount
 
-        self.target_refresh_freq = target_refresh_freq  # Обновляю таргет каждые FREQ шагов (т.к. легче реализовать, нежели soft-обновление)
+        self.target_refresh_freq = target_refresh_freq  # Обновляю таргет каждые FREQ шагов (не используется по дефолту)
+        self.alpha = alpha  # Обновляю таргет как (1-alpha)*old + alpha*new (используется по дефолту)
         self.logg_freq = logg_freq  # Насколько часто логируем лоссы и всё остальное
         self.iter = 0
         self.device = device
@@ -187,8 +191,9 @@ class IQL:
         self.q_opt.step()
 
         # Обновляем Q-target
-        if self.iter % self.target_refresh_freq == 0:
-            self.q_target.load_state_dict(self.q_net.state_dict())
+        # if self.iter % self.target_refresh_freq == 0:
+        #     self.q_target.load_state_dict(self.q_net.state_dict())
+        soft_update(self.q_target, self.q_net, self.alpha)
 
     def _update_policy(self, advantages, states, actions, logger):
         exp_advantages = torch.exp(self.beta * advantages.detach()).clamp(max=100)

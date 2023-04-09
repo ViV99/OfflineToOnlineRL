@@ -10,8 +10,8 @@ from utils import load_dataset_to_replay_buffer, linear_decay, smoothen, evaluat
     wait_for_keyboard_interrupt
 
 
-def train_iql_on_env(env_name, device, buffer_size=int(2e6), total_steps=int(5e5),
-                     batch_size=64, eval_freq=5000):
+def train_iql_on_env(env_name, device, tau=0.7, beta=3.0, buffer_size=int(2e6), total_steps=int(5e5),
+                     batch_size=64, eval_freq=5000, eval_games=10):
     env = gym.make(env_name)
     env.reset()
     action_dim = env.action_space.shape[0]
@@ -35,6 +35,8 @@ def train_iql_on_env(env_name, device, buffer_size=int(2e6), total_steps=int(5e5
         q_opt=torch.optim.Adam(q_network.parameters(), lr=1e-4),
         v_net=v_network,
         v_opt=torch.optim.Adam(v_network.parameters(), lr=1e-4),
+        tau=tau,
+        beta=beta,
     )
 
     mean_rw_history = []
@@ -67,7 +69,7 @@ def train_iql_on_env(env_name, device, buffer_size=int(2e6), total_steps=int(5e5
 
             if step % eval_freq == 0:
                 e = gym.make(env_name)
-                r = evaluate(e, device, iql.policy, seed=step)
+                r = evaluate(e, device, iql.policy, seed=step, n_games=eval_games)
                 mean_rw_history.append(e.get_normalized_score(r) * 100.0)
                 initial_state_v_history.append(iql.v_net(torch.tensor([gym.make(env_name).reset(seed=step)],
                                                                       device=device,
