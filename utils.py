@@ -5,9 +5,9 @@ import time
 from scipy.signal import fftconvolve, gaussian
 
 
-def soft_update(target, source, tau: float):
+def soft_update(target, source, alpha: float):
     for target_param, source_param in zip(target.parameters(), source.parameters()):
-        target_param.data.copy_((1 - tau) * target_param.data + tau * source_param.data)
+        target_param.data.copy_((1 - alpha) * target_param.data + alpha * source_param.data)
 
 
 def wait_for_keyboard_interrupt():

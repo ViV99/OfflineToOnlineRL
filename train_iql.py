@@ -5,7 +5,10 @@ import torch
 from tqdm import trange
 from IPython.display import clear_output
 from replay_buffer import ReplayBuffer
-from iql import DoubleQNet, VNet, GaussianPolicy, EGreedyPolicy, IQL
+
+from iql import IQL
+from policy import GaussianPolicy, EGreedyPolicy
+from networks import DoubleQNet, VNet
 from utils import load_dataset_to_replay_buffer, linear_decay, smoothen, evaluate, is_enough_ram, \
     wait_for_keyboard_interrupt
 
