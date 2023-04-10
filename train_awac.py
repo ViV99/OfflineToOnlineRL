@@ -20,6 +20,7 @@ def train_awac_on_env(env_name, device, beta=3.0, buffer_size=int(2e6), total_st
     env.reset()
     action_dim = env.action_space.shape[0]
     state_dim = env.observation_space.shape[0]
+    min_action = env.action_space.low[0]
     max_action = env.action_space.high[0]
 
     dataset = env.get_dataset()
@@ -27,7 +28,7 @@ def train_awac_on_env(env_name, device, beta=3.0, buffer_size=int(2e6), total_st
     replay = ReplayBuffer(buffer_size)
     load_dataset_to_replay_buffer(dataset, replay)
 
-    policy = GaussianPolicy(state_dim, action_dim, max_action).to(device)
+    policy = GaussianPolicy(state_dim, action_dim, min_action, max_action).to(device)
     q_network = DoubleQNet(state_dim, action_dim).to(device)
     awac = AWAC(
         device=device,
@@ -58,8 +59,8 @@ def train_awac_on_env(env_name, device, beta=3.0, buffer_size=int(2e6), total_st
 
             # Семплим из буффера батч для обучения
             states, actions, rewards, next_states, is_done = replay.sample(batch_size)
+            print(11111111)
             logger = awac.train(device, states, actions, rewards, next_states, is_done)
-
             if logger:
                 policy_loss_history.append(logger['policy_loss'])
                 q_loss_history.append(logger['q_loss'])
@@ -69,8 +70,8 @@ def train_awac_on_env(env_name, device, beta=3.0, buffer_size=int(2e6), total_st
                 r = evaluate(e, device, awac.policy, seed=step, n_games=eval_games)
                 mean_rw_history.append(e.get_normalized_score(r) * 100.0)
 
-                state = e.reset(seed=step)
-                action = awac.policy.act(device, torch.tensor([state], device=device, dtype=torch.float32))
+                state = torch.tensor([e.reset(seed=step)], device=device, dtype=torch.float32)
+                action = torch.tensor([awac.policy.act(device, state)], device=device, dtype=torch.float32)
                 initial_state_v_history.append(awac.q_net(state, action).cpu().data.numpy())
 
                 clear_output(True)

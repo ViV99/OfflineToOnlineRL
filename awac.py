@@ -1,8 +1,6 @@
 import torch
 import copy
-from torch import nn
-from networks import DoubleQNet
-from policy import GaussianPolicy
+
 from utils import soft_update
 
 
@@ -34,10 +32,10 @@ class AWAC:
         return torch.mean((y1 - y2) ** 2, dim=-1)
 
     def _policy_loss(self, states, actions):
-        with torch.no_grad():
-            policy_act = self.policy(states)
-            cur_actions = policy_act.rsample()
+        policy_act = self.policy(states)
 
+        with torch.no_grad():
+            cur_actions = policy_act.rsample()
             v = self.q_net(states, cur_actions)
             q = self.q_net(states, actions)
             advantages = q - v
@@ -53,9 +51,10 @@ class AWAC:
 
     def _q_loss(self, states, actions, rewards, next_states, is_done):
         is_not_done = 1.0 - is_done.float()
-        with torch.no_grad():
-            next_actions = self.policy(next_states).rsample()
 
+        with torch.no_grad():
+            next_actions = self.policy(next_states).rsample().clamp(min=self.policy.min_action,
+                                                                    max=self.policy.max_action)
             q_next = self.q_target(next_states, next_actions)
             targets = rewards + self.discount * is_not_done * q_next
 
@@ -64,7 +63,7 @@ class AWAC:
         return q_loss
 
     def _update_q(self, states, actions, rewards, next_states, is_done):
-        loss = self._q_loss(states, actions, rewards, is_done, next_states)
+        loss = self._q_loss(states, actions, rewards, next_states, is_done)
         self.q_opt.zero_grad()
         loss.backward()
         self.q_opt.step()
@@ -88,13 +87,9 @@ class AWAC:
 
         q_loss = self._update_q(states, actions, rewards, next_states, is_done)
         policy_loss = self._update_policy(states, actions)
-
         soft_update(self.q_target, self.q_net, self.alpha)
 
         if self.iter % self.logg_freq == 0:
-            return {'q_loss': q_loss, 'actor_loss': policy_loss}
+            return {'q_loss': q_loss, 'policy_loss': policy_loss}
         else:
             return {}
-
-
-
