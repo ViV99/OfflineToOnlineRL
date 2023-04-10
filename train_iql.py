@@ -20,6 +20,7 @@ def train_iql_on_env(env_name, device, tau=0.7, beta=3.0, buffer_size=int(2e6), 
     env.reset()
     action_dim = env.action_space.shape[0]
     state_dim = env.observation_space.shape[0]
+    min_action = env.action_space.low[0]
     max_action = env.action_space.high[0]
 
     dataset = env.get_dataset()
@@ -27,7 +28,7 @@ def train_iql_on_env(env_name, device, tau=0.7, beta=3.0, buffer_size=int(2e6), 
     replay = ReplayBuffer(buffer_size)
     load_dataset_to_replay_buffer(dataset, replay)
 
-    policy = GaussianPolicy(state_dim, action_dim, max_action).to(device)
+    policy = GaussianPolicy(state_dim, action_dim, min_action, max_action).to(device)
     q_network = DoubleQNet(state_dim, action_dim).to(device)
     v_network = VNet(state_dim).to(device)
     iql = IQL(

@@ -39,8 +39,9 @@ class EGreedyPolicy(nn.Module):
 
 class GaussianPolicy(nn.Module):
     #  Гауссова политика
-    def __init__(self, state_dim: int, action_dim: int, max_action: float, max_std: float = 3):
+    def __init__(self, state_dim: int, action_dim: int, min_action: float, max_action: float, max_std: float = 3):
         super().__init__()
+        self.min_action = min_action
         self.max_action = max_action
         self.log_std = nn.Parameter(torch.zeros(action_dim, dtype=torch.float32))
         self.max_std = max_std
@@ -66,5 +67,5 @@ class GaussianPolicy(nn.Module):
         state = torch.tensor(state.reshape(1, -1), device=device, dtype=torch.float32)
         dist = self(state)
         action = dist.mean if not self.training else dist.sample()
-        action = torch.clamp(self.max_action * action, -self.max_action, self.max_action)
+        action = torch.clamp(self.max_action * action, self.min_action, self.max_action)
         return action.cpu().data.numpy().flatten()
