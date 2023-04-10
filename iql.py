@@ -4,15 +4,15 @@ from utils import soft_update
 
 
 class IQL:
-    def __init__(self, max_action: float, device: str,
+    def __init__(self, device: str,
                  policy, policy_opt, q_net, q_opt, v_net, v_opt,
                  tau: float = 0.7,
                  beta: float = 3.0,
                  discount: float = 0.99,
+                 exp_adv_max: float = 100.0,
                  target_refresh_freq: int = 5000,
                  alpha: float = 0.005,
                  logg_freq: int = 50):
-        self.max_action = max_action
         self.q_net = q_net  # Аппроксимация Q
         self.q_opt = q_opt  # Отпимайзер для Q
         self.q_target = copy.deepcopy(self.q_net).requires_grad_(False).to(device)  # Q-target
@@ -22,8 +22,8 @@ class IQL:
         self.policy_opt = policy_opt  # Отпимайзер для политики
         self.tau = tau  # Коэффициент для экспектильной регрессии
         self.beta = beta  # Коэффициент для advantage-weighted регрессии
-
         self.discount = discount
+        self.exp_adv_max = exp_adv_max  # Обрезаем экспоненту A(s, a), чтобы вес не был слишком большой
 
         self.target_refresh_freq = target_refresh_freq  # Обновляю таргет каждые FREQ шагов (не используется по дефолту)
         self.alpha = alpha  # Обновляю таргет как (1-alpha)*old + alpha*new (используется по дефолту)
@@ -57,7 +57,7 @@ class IQL:
 
     def _update_q(self, next_v, states, actions, rewards, is_done, logger):
         is_not_done = 1.0 - is_done.float()
-        targets = rewards + is_not_done * self.discount * next_v.squeeze().detach()
+        targets = rewards + is_not_done * self.discount * next_v.detach()
         q1, q2 = self.q_net.double_forward(states, actions)
         q_loss = (self._mse_loss(q1, targets) + self._mse_loss(q2, targets)) / 2
 
@@ -74,7 +74,7 @@ class IQL:
         soft_update(self.q_target, self.q_net, self.alpha)
 
     def _update_policy(self, advantages, states, actions, logger):
-        exp_advantages = torch.exp(self.beta * advantages.detach()).clamp(max=100)
+        exp_advantages = torch.exp(self.beta * advantages.detach()).clamp(max=self.exp_adv_max)
         policy_act = self.policy(states)
         if isinstance(policy_act, torch.distributions.Distribution):
             action_losses = -policy_act.log_prob(actions)

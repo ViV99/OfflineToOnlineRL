@@ -39,10 +39,11 @@ class EGreedyPolicy(nn.Module):
 
 class GaussianPolicy(nn.Module):
     #  Гауссова политика
-    def __init__(self, state_dim: int, action_dim: int, max_action: float):
+    def __init__(self, state_dim: int, action_dim: int, max_action: float, max_std: float = 3):
         super().__init__()
         self.max_action = max_action
         self.log_std = nn.Parameter(torch.zeros(action_dim, dtype=torch.float32))
+        self.max_std = max_std
 
         self.model = nn.Sequential(
             nn.Linear(in_features=state_dim, out_features=128),
@@ -57,7 +58,7 @@ class GaussianPolicy(nn.Module):
 
     def forward(self, states):
         mean = self.model(states)
-        std = torch.exp(self.log_std.clamp(-3, 3))
+        std = torch.exp(self.log_std.clamp(-self.max_std, self.max_std))
         return MultivariateNormal(mean, scale_tril=torch.diag(std))
 
     @torch.no_grad()
