@@ -59,7 +59,6 @@ def train_awac_on_env(env_name, device, beta=3.0, buffer_size=int(2e6), total_st
 
             # Семплим из буффера батч для обучения
             states, actions, rewards, next_states, is_done = replay.sample(batch_size)
-            print(11111111)
             logger = awac.train(device, states, actions, rewards, next_states, is_done)
             if logger:
                 policy_loss_history.append(logger['policy_loss'])
